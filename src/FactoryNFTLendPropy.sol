@@ -9,8 +9,10 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @dev This contract is a factory for creating new instances of NFTLendPropy contracts.
  */
 contract FactoryNFTLendPropy is ReentrancyGuard {
+    // Array to store all created NFTLendPropy contract addresses
     address[] public allLends;
 
+    // Event emitted when a new NFTLendPropy contract is created
     event LendContractCreated(address indexed lendContract);
 
     /**
@@ -18,8 +20,11 @@ contract FactoryNFTLendPropy is ReentrancyGuard {
      * @param _token The address of the ERC20 token to be used for lends.
      */
     function createLendContract(address _token) external nonReentrant {
+        // Create a new instance of NFTLendPropy contract
         NFTLendPropy lend = new NFTLendPropy(_token);
+        // Add the address of the new lend contract to the array
         allLends.push(address(lend));
+        // Emit an event to log the creation of the new lend contract
         emit LendContractCreated(address(lend));
     }
 

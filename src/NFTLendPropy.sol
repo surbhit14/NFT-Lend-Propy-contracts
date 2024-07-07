@@ -19,6 +19,10 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
     mapping(address => mapping(uint256 => Offer[])) public offersByNft;
     mapping(address => mapping(uint256 => bool)) public nftListings; // New mapping to track listed NFTs
 
+    /**
+     * @dev Initializes the contract with the given ERC20 token address.
+     * @param _token The address of the ERC20 token to be used for lending.
+     */
     constructor(address _token) {
         token = IERC20(_token);
     }
@@ -46,7 +50,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
 
         require(_amount <= token.balanceOf(msg.sender), "Insufficient balance");
         token.transferFrom(msg.sender, address(this), _amount);
-        
+
         offerId = lastOfferId++;
 
         offers[offerId] = Offer({
@@ -101,6 +105,10 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         nftListings[_nftContract][_tokenId] = false;
     }
 
+    /**
+     * @dev Accepts a lending offer for an NFT.
+     * @param _offerId The ID of the offer to accept.
+     */
     function acceptOffer(uint256 _offerId) external override nonReentrant {
         Offer storage offer = offers[_offerId];
         require(offer.active, "Offer does not exist or is inactive");
@@ -120,18 +128,15 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         emit OfferAccepted(_offerId, msg.sender);
     }
 
+    /**
+     * @dev Repays a loan.
+     * @param _offerId The ID of the offer to repay.
+     */
     function repayLend(uint256 _offerId) external override nonReentrant {
         Offer storage offer = offers[_offerId];
         require(offer.active, "Offer does not exist or is inactive");
         require(offer.borrower == msg.sender, "You did not accept this offer");
         require(block.timestamp <= offer.endTime, "Loan has expired");
-
-        // uint256 plannedDuration = offer.duration;
-        // uint256 principal = offer.amount;
-        // uint256 interestRate = offer.interestRate;
-        // uint256 interestPerSecond = (principal * interestRate) / plannedDuration;
-        // uint256 actualDuration = block.timestamp - offer.startTime;
-        // uint256 interest = (actualDuration * interestPerSecond) / uint256(10000);
 
         uint256 interest = getInterest(_offerId, block.timestamp, block.timestamp + offer.duration);
 
@@ -147,6 +152,10 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         emit LendRepaid(_offerId, msg.sender);
     }
 
+    /**
+     * @dev Redeems the collateral (NFT) if the loan is not repaid in time.
+     * @param _offerId The ID of the offer to redeem collateral from.
+     */
     function redeemCollateral(uint256 _offerId) external override nonReentrant {
         Offer storage offer = offers[_offerId];
         require(offer.active, "Offer does not exist or is inactive");
@@ -162,6 +171,10 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         emit NFTClaimed(_offerId, msg.sender);
     }
 
+    /**
+     * @dev Cancels a lending offer.
+     * @param _offerId The ID of the offer to cancel.
+     */
     function cancelOffer(uint256 _offerId) external override nonReentrant {
         Offer storage offer = offers[_offerId];
         require(offer.active, "Offer does not exist or is inactive");
@@ -174,14 +187,32 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         emit OfferCancelled(_offerId, msg.sender);
     }
 
+    /**
+     * @dev Gets the details of a lending offer.
+     * @param _offerId The ID of the offer.
+     * @return The details of the offer.
+     */
     function getOffer(uint256 _offerId) external view override returns (Offer memory) {
         return offers[_offerId];
     }
 
+    /**
+     * @dev Gets the list of offers for a specific NFT.
+     * @param _nftContract The address of the NFT contract.
+     * @param _tokenId The ID of the NFT.
+     * @return The list of offers for the specified NFT.
+     */
     function getOffersByNft(address _nftContract, uint256 _tokenId) external view override returns (Offer[] memory) {
         return offersByNft[_nftContract][_tokenId];
     }
 
+    /**
+     * @dev Calculates the interest for a loan.
+     * @param _offerId The ID of the offer.
+     * @param startTime The start time of the loan.
+     * @param endTime The end time of the loan.
+     * @return The calculated interest for the specified duration.
+     */
     function getInterest(uint256 _offerId, uint256 startTime, uint256 endTime) public view override returns (uint256) {
         uint256 plannedDuration = offers[_offerId].duration;
         uint256 principal = offers[_offerId].amount;
