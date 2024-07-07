@@ -45,6 +45,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         require(nftListings[_nftContract][_tokenId], "NFT must be listed");
 
         require(_amount <= token.balanceOf(msg.sender), "Insufficient balance");
+        token.transferFrom(msg.sender, address(this), _amount);
         
         offerId = lastOfferId++;
 
@@ -114,8 +115,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         offer.endTime = block.timestamp + offer.duration;
 
         IERC721(_nftContract).transferFrom(msg.sender, address(this), _tokenId);
-        
-        token.transferFrom(offer.lender, msg.sender, offer.amount);
+        token.transfer(msg.sender, offer.amount);
 
         emit OfferAccepted(_offerId, msg.sender);
     }
@@ -165,7 +165,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         require(offer.active, "Offer does not exist or is inactive");
         require(offer.lender == msg.sender, "You did not create this offer");
 
-        token.transfer(offer.lender, offer.amount);
+        token.transfer(msg.sender, offers[_offerId].amount);
 
         offer.active = false;
         delistNft(offer.nftContract, offer.tokenId);
