@@ -4,8 +4,8 @@ pragma solidity 0.8.25;
 import "forge-std/Test.sol";
 import "../src/NFTLendPropy.sol";
 import "../src/FactoryNFTLendPropy.sol";
-import "../src/interface/IERC20.sol";
-import "../src/interface/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract NFTLendPropyTest is Test {
     FactoryNFTLendPropy factory;
@@ -127,34 +127,6 @@ contract NFTLendPropyTest is Test {
         vm.warp(block.timestamp + duration + 1);
 
         vm.startPrank(lender);
-        lendContract.claimNFT(offerId);
-
-        NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
-        assertEq(offer.active, false);
-        assertEq(erc721.ownerOf(borrowerTokenId), lender);
-        vm.stopPrank();
-    }
-
-    function testRedeemCollateral() public {
-        uint256 amount = 10 ether;
-        uint256 duration = 100 days;
-
-        vm.startPrank(lender);
-        erc20.approve(address(lendContract), amount);
-        uint256 offerId = lendContract.createOffer(address(erc721), borrowerTokenId, 500, duration, amount);
-        vm.stopPrank();
-
-        vm.startPrank(borrower);
-        lendContract.acceptOffer(offerId);
-        vm.stopPrank();
-
-        vm.warp(block.timestamp + duration + 1);
-
-        vm.startPrank(lender);
-        lendContract.claimNFT(offerId);
-
-        vm.warp(block.timestamp + 2 days);
-
         lendContract.redeemCollateral(offerId);
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
@@ -162,4 +134,5 @@ contract NFTLendPropyTest is Test {
         assertEq(erc721.ownerOf(borrowerTokenId), lender);
         vm.stopPrank();
     }
+
 }

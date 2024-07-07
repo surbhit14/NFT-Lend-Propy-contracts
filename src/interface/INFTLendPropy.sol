@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.0;
 
 /**
  * @title INFTLendPropy
@@ -53,13 +53,11 @@ interface INFTLendPropy {
 
     function getListedNfts() external view returns (NFT[] memory);
 
-    function delistNft(address _nftContract, uint256 _tokenId) external;
-
     function acceptOffer(uint256 _offerId) external;
 
     function repayLend(uint256 _offerId) external;
 
-    function claimNFT(uint256 _offerId) external;
+    function redeemCollateral(uint256 _offerId) external;
 
     function cancelOffer(uint256 _offerId) external;
 

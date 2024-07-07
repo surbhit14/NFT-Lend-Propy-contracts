@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import "./NFTLendPropy.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title FactoryNFTLendPropy
