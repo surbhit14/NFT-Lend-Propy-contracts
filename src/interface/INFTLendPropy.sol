@@ -44,20 +44,6 @@ interface INFTLendPropy {
         bool active;
     }
 
-    /**
-     * @dev Struct to represent a pool of deposits.
-     * @param totalDeposits The total amount of deposits.
-     * @param totalInterestPaid The total amount of interest paid.
-     * @param deposits A mapping of address to the amount deposited.
-     * @param depositors An array of addresses of depositors.
-     */
-    struct Pool {
-        uint256 totalDeposits;
-        uint256 totalInterestPaid;
-        mapping(address => uint256) deposits;
-        address[] depositors;
-    }
-
     // Events to log various actions in the contract
     event LendOfferCreated(uint256 offerId, address lender, address nftContract, uint256 tokenId, uint256 amount);
     event NFTListed(address nftContract, uint256 tokenId, address owner);
