@@ -17,13 +17,21 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
     uint256 public lastOfferId;
     mapping(uint256 => Offer) public offers;
     mapping(address => mapping(uint256 => Offer[])) public offersByNft;
-
-    Pool public pool;
+    mapping(address => mapping(uint256 => bool)) public nftListings; // New mapping to track listed NFTs
 
     constructor(address _token) {
         token = IERC20(_token);
     }
 
+    /**
+     * @dev Creates a lending offer for a listed NFT.
+     * @param _nftContract The address of the NFT contract.
+     * @param _tokenId The ID of the NFT.
+     * @param _interestRate The interest rate for the loan.
+     * @param _duration The duration of the loan.
+     * @param _amount The amount of tokens to be lent.
+     * @return offerId The ID of the created offer.
+     */
     function createOffer(
         address _nftContract,
         uint256 _tokenId,
@@ -34,10 +42,10 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         require(_interestRate > 0, "Interest rate must be greater than 0");
         require(_duration > 0, "Duration must be greater than 0");
         require(_amount > 0, "Amount must be greater than 0");
+        require(nftListings[_nftContract][_tokenId], "NFT must be listed");
 
         require(_amount <= token.balanceOf(msg.sender), "Insufficient balance");
-        token.transferFrom(msg.sender, address(this), _amount);
-
+        
         offerId = lastOfferId++;
 
         offers[offerId] = Offer({
@@ -56,17 +64,32 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         emit LendOfferCreated(offerId, msg.sender, _nftContract, _tokenId, _amount);
     }
 
+    /**
+     * @dev Lists an NFT for lending.
+     * @param _nftContract The address of the NFT contract.
+     * @param _tokenId The ID of the NFT.
+     */
     function listNft(address _nftContract, uint256 _tokenId) external override {
         require(IERC721(_nftContract).ownerOf(_tokenId) == msg.sender, "You do not own this NFT");
         listedNfts.push(NFT({nftContract: _nftContract, tokenId: _tokenId, listed: true}));
-        IERC721(_nftContract).transferFrom(msg.sender, address(this), _tokenId);
+        nftListings[_nftContract][_tokenId] = true;
+
         emit NFTListed(_nftContract, _tokenId, msg.sender);
     }
 
+    /**
+     * @dev Gets the list of listed NFTs.
+     * @return The list of listed NFTs.
+     */
     function getListedNfts() external view override returns (NFT[] memory) {
         return listedNfts;
     }
 
+    /**
+     * @dev Delists an NFT.
+     * @param _nftContract The address of the NFT contract.
+     * @param _tokenId The ID of the NFT.
+     */
     function delistNft(address _nftContract, uint256 _tokenId) private {
         for (uint i = 0; i < listedNfts.length; i++) {
             if (listedNfts[i].nftContract == _nftContract && listedNfts[i].tokenId == _tokenId) {
@@ -74,6 +97,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
                 break;
             }
         }
+        nftListings[_nftContract][_tokenId] = false;
     }
 
     function acceptOffer(uint256 _offerId) external override nonReentrant {
@@ -90,7 +114,9 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         offer.endTime = block.timestamp + offer.duration;
 
         IERC721(_nftContract).transferFrom(msg.sender, address(this), _tokenId);
-        token.transfer(msg.sender, offer.amount);
+        
+        token.transferFrom(offer.lender, msg.sender, offer.amount);
+
         emit OfferAccepted(_offerId, msg.sender);
     }
 
@@ -139,7 +165,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         require(offer.active, "Offer does not exist or is inactive");
         require(offer.lender == msg.sender, "You did not create this offer");
 
-        token.transferFrom(address(this), msg.sender, offer.amount);
+        token.transfer(offer.lender, offer.amount);
 
         offer.active = false;
         delistNft(offer.nftContract, offer.tokenId);
@@ -162,53 +188,5 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         uint256 actualDuration = endTime - startTime;
         uint256 interest = actualDuration * interestPerSecond;
         return interest / uint256(10000);
-    }
-
-    function deposit(uint256 _amount) external override nonReentrant {
-        require(_amount > 0, "Amount must be greater than 0");
-        token.transferFrom(msg.sender, address(this), _amount);
-
-        if (pool.deposits[msg.sender] == 0) {
-            pool.depositors.push(msg.sender);
-        }
-
-        pool.totalDeposits += _amount;
-        pool.deposits[msg.sender] += _amount;
-        emit DepositMade(msg.sender, _amount);
-    }
-
-    function withdraw(uint256 _amount) external override nonReentrant {
-        require(_amount > 0, "Amount must be greater than 0");
-        require(pool.deposits[msg.sender] >= _amount, "Insufficient balance");
-
-        pool.deposits[msg.sender] -= _amount;
-        pool.totalDeposits -= _amount;
-        token.transfer(msg.sender, _amount);
-
-        if (pool.deposits[msg.sender] == 0) {
-            for (uint256 i = 0; i < pool.depositors.length; i++) {
-                if (pool.depositors[i] == msg.sender) {
-                    pool.depositors[i] = pool.depositors[pool.depositors.length - 1];
-                    pool.depositors.pop();
-                    break;
-                }
-            }
-        }
-
-        emit WithdrawalMade(msg.sender, _amount);
-    }
-
-    function distributeInterest(uint256 _interest) external override {
-        uint256 totalDeposits = pool.totalDeposits;
-        if (totalDeposits == 0) {
-            return;
-        }
-
-        for (uint256 i = 0; i < pool.depositors.length; i++) {
-            address provider = pool.depositors[i];
-            uint256 providerShare = (pool.deposits[provider] * _interest) / totalDeposits;
-            pool.totalInterestPaid += providerShare;
-            token.transfer(provider, providerShare);
-        }
     }
 }

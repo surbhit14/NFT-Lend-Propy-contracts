@@ -66,10 +66,4 @@ interface INFTLendPropy {
     function getOffersByNft(address _nftContract, uint256 _tokenId) external view returns (Offer[] memory);
 
     function getInterest(uint256 _offerId, uint256 startTime, uint256 endTime) external view returns (uint256);
-
-    function deposit(uint256 _amount) external;
-
-    function withdraw(uint256 _amount) external;
-
-    function distributeInterest(uint256 _interest) external;
 }

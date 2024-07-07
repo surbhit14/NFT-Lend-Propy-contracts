@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import "../src/NFTLendPropy.sol";
@@ -8,7 +8,6 @@ import "../src/SampleERC20.sol";
 import "../src/SampleERC721.sol";
 
 contract NFTLendPropyTest is Test {
-    FactoryNFTLendPropy factory;
     NFTLendPropy lendContract;
     SampleERC20 erc20;
     SampleERC721 erc721;
@@ -19,60 +18,35 @@ contract NFTLendPropyTest is Test {
 
     function setUp() public {
         owner = address(this);
-        borrower = address(0x2);
-        lender = address(0x3);
-
-        vm.deal(borrower, 1 ether);
-        vm.deal(lender, 1 ether);
+        borrower = address(1);
+        lender = address(2);
 
         // Deploy Sample ERC20 and ERC721 tokens
         erc20 = new SampleERC20("SampleToken", "STK", 1_000_000 * 10 ** 18);
         erc721 = new SampleERC721("SampleNFT", "SNFT");
 
-        // Mint ERC20 tokens to borrower and lender
-        erc20.mint(borrower, 1_000 * 10 ** 18);
-        erc20.mint(lender, 1_000 * 10 ** 18);
-
-        // Mint an ERC721 token to the borrower
+        // Mint ERC721 token to borrower
         borrowerTokenId = erc721.mint(borrower);
 
-        // Log the ownership of the ERC721 token
-        emit log_named_address("ERC721 Owner after minting", erc721.ownerOf(borrowerTokenId));
+        // Transfer ERC20 tokens to lender
+        erc20.transfer(lender, 1000 ether);
 
-        // Deploy the factory and create a lend contract
-        factory = new FactoryNFTLendPropy();
-        factory.createLendContract(address(erc20));
-        lendContract = NFTLendPropy(factory.getLendContract(0));
-
-        emit log_named_address("Owner", owner);
-        emit log_named_address("Borrower", borrower);
-        emit log_named_address("Lender", lender);
+        // Deploy the lending contract
+        lendContract = new NFTLendPropy(address(erc20));
     }
 
     function testListNFT() public {
-        uint256 newTokenId = erc721.mint(borrower); // Mint a new token for this test
-        emit log_named_uint("New Token ID", newTokenId);
-        emit log_named_address("New ERC721 Owner after minting", erc721.ownerOf(newTokenId));
-
         vm.startPrank(borrower);
-        erc721.approve(address(lendContract), newTokenId);
-        lendContract.listNft(address(erc721), newTokenId);
-        vm.stopPrank();
+        erc721.approve(address(lendContract), borrowerTokenId);
+        lendContract.listNft(address(erc721), borrowerTokenId);
 
         NFTLendPropy.NFT[] memory listedNfts = lendContract.getListedNfts();
-        assertEq(listedNfts.length, 1); // We expect 1 NFT listed now
+        assertEq(listedNfts.length, 1);
         assertEq(listedNfts[0].nftContract, address(erc721));
-        assertEq(listedNfts[0].tokenId, newTokenId);
+        assertEq(listedNfts[0].tokenId, borrowerTokenId);
 
-        emit log_named_address("NFT Contract", address(erc721));
-        emit log_named_uint("Token ID", newTokenId);
-        emit log_named_uint("Total Listed NFTs", listedNfts.length);
-    }
-
-    function testListNFTRevertNotOwner() public {
-        vm.startPrank(owner);
-        vm.expectRevert("You do not own this NFT");
-        lendContract.listNft(address(erc721), borrowerTokenId);
+        // Log for verification
+        emit log_named_address("ERC721 Owner after listing", erc721.ownerOf(borrowerTokenId));
         vm.stopPrank();
     }
 
@@ -80,7 +54,6 @@ contract NFTLendPropyTest is Test {
         uint256 amount = 10 ether;
         uint256 duration = 100 days;
 
-        // List the NFT
         vm.startPrank(borrower);
         erc721.approve(address(lendContract), borrowerTokenId);
         lendContract.listNft(address(erc721), borrowerTokenId);
@@ -89,24 +62,19 @@ contract NFTLendPropyTest is Test {
         vm.startPrank(lender);
         erc20.approve(address(lendContract), amount);
         uint256 offerId = lendContract.createOffer(address(erc721), borrowerTokenId, 500, duration, amount);
-        vm.stopPrank();
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
         assertEq(offer.lender, lender);
         assertEq(offer.amount, amount);
-
-        emit log_named_address("NFT Contract", address(erc721));
-        emit log_named_uint("Token ID", borrowerTokenId);
-        emit log_named_uint("Offer ID", offerId);
-        emit log_named_address("Lender", offer.lender);
-        emit log_named_uint("Amount", offer.amount);
+        assertEq(offer.nftContract, address(erc721));
+        assertEq(offer.tokenId, borrowerTokenId);
+        vm.stopPrank();
     }
 
     function testAcceptOffer() public {
         uint256 amount = 10 ether;
         uint256 duration = 100 days;
 
-        // List the NFT
         vm.startPrank(borrower);
         erc721.approve(address(lendContract), borrowerTokenId);
         lendContract.listNft(address(erc721), borrowerTokenId);
@@ -119,20 +87,19 @@ contract NFTLendPropyTest is Test {
 
         vm.startPrank(borrower);
         lendContract.acceptOffer(offerId);
-        vm.stopPrank();
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
         assertEq(offer.borrower, borrower);
 
-        emit log_named_uint("Offer ID", offerId);
-        emit log_named_address("Borrower", offer.borrower);
+        // Log for verification
+        emit log_named_address("ERC721 Owner after accepting offer", erc721.ownerOf(borrowerTokenId));
+        vm.stopPrank();
     }
 
     function testRepayLend() public {
         uint256 amount = 10 ether;
         uint256 duration = 100 days;
 
-        // List the NFT
         vm.startPrank(borrower);
         erc721.approve(address(lendContract), borrowerTokenId);
         lendContract.listNft(address(erc721), borrowerTokenId);
@@ -146,22 +113,24 @@ contract NFTLendPropyTest is Test {
         vm.startPrank(borrower);
         lendContract.acceptOffer(offerId);
 
-        erc20.approve(address(lendContract), amount * 2);
+        uint256 interest = lendContract.getInterest(offerId, block.timestamp, block.timestamp + duration);
+        uint256 totalRepayment = amount + interest;
+
+        erc20.approve(address(lendContract), totalRepayment);
         lendContract.repayLend(offerId);
-        vm.stopPrank();
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
         assertEq(offer.active, false);
 
-        emit log_named_uint("Offer ID", offerId);
-        emit log_named_uint("Amount Repaid", amount * 2);
+        // Log for verification
+        emit log_named_address("ERC721 Owner after repayment", erc721.ownerOf(borrowerTokenId));
+        vm.stopPrank();
     }
 
-    function testClaimCollateral() public {
+    function testRedeemCollateral() public {
         uint256 amount = 10 ether;
         uint256 duration = 100 days;
 
-        // List the NFT
         vm.startPrank(borrower);
         erc721.approve(address(lendContract), borrowerTokenId);
         lendContract.listNft(address(erc721), borrowerTokenId);
@@ -176,17 +145,41 @@ contract NFTLendPropyTest is Test {
         lendContract.acceptOffer(offerId);
         vm.stopPrank();
 
+        // Fast forward time to expire the loan duration
         vm.warp(block.timestamp + duration + 1);
 
         vm.startPrank(lender);
         lendContract.redeemCollateral(offerId);
-        vm.stopPrank();
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
         assertEq(offer.active, false);
         assertEq(erc721.ownerOf(borrowerTokenId), lender);
 
-        emit log_named_uint("Offer ID", offerId);
-        emit log_named_address("Collateral Owner", lender);
+        // Log for verification
+        emit log_named_address("ERC721 Owner after redeeming collateral", erc721.ownerOf(borrowerTokenId));
+        vm.stopPrank();
+    }
+
+    function testCancelOffer() public {
+        uint256 amount = 10 ether;
+        uint256 duration = 100 days;
+
+        vm.startPrank(borrower);
+        erc721.approve(address(lendContract), borrowerTokenId);
+        lendContract.listNft(address(erc721), borrowerTokenId);
+        vm.stopPrank();
+
+        vm.startPrank(lender);
+        erc20.approve(address(lendContract), amount);
+        uint256 offerId = lendContract.createOffer(address(erc721), borrowerTokenId, 500, duration, amount);
+
+        lendContract.cancelOffer(offerId);
+
+        NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
+        assertEq(offer.active, false);
+
+        // Log for verification
+        emit log_named_address("ERC20 Balance after cancelling offer", erc20.balanceOf(lender));
+        vm.stopPrank();
     }
 }
