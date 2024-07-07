@@ -117,7 +117,7 @@ contract NFTLendPropyTest is Test {
 
  function testRepayLend() public {
     uint256 amount = 1 ether;
-    uint256 duration = 1;
+    uint256 duration = 1 days;
 
     // Step 1: Borrower lists the NFT
     vm.startPrank(borrower);
