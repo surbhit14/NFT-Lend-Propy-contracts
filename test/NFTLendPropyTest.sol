@@ -4,8 +4,8 @@ pragma solidity 0.8.25;
 import "forge-std/Test.sol";
 import "../src/NFTLendPropy.sol";
 import "../src/FactoryNFTLendPropy.sol";
-import "../src/IERC20.sol";
-import "../src/IERC721.sol";
+import "../src/interface/IERC20.sol";
+import "../src/interface/IERC721.sol";
 
 contract NFTLendPropyTest is Test {
     FactoryNFTLendPropy factory;

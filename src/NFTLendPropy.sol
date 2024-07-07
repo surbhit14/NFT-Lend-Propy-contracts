@@ -42,7 +42,7 @@ contract NFTLendPropy is INFTLendPropy, ReentrancyGuard {
 
     NFT[] public listedNfts;
     uint256 public lastOfferId;
-    mapping(uint256 => Offer> public offers;
+    mapping(uint256 => Offer) public offers;
     mapping(address => mapping(uint256 => Offer[])) public offersByNft;
     mapping(address => mapping(uint256 => bool)) public isNFTListed;
     Pool public liquidityPool;
@@ -79,7 +79,8 @@ contract NFTLendPropy is INFTLendPropy, ReentrancyGuard {
         uint256 _interestRate,
         uint256 _duration,
         uint256 _amount
-    ) public nonReentrant returns (uint256 offerId) {
+    ) public nonReentrant
+     returns (uint256 offerId) {
         require(isNFTListed[_nftContract][_tokenId], "NFT not listed for collateral");
         require(_interestRate > 0, "Interest rate must be greater than 0");
         require(_duration > 0, "Duration must be greater than 0");
