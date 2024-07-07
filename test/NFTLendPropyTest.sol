@@ -2,16 +2,16 @@
 pragma solidity 0.8.25;
 
 import "forge-std/Test.sol";
-import "../contracts/NFTLendPropy.sol";
-import "../contracts/SampleERC20.sol";
-import "../contracts/SampleERC721.sol";
-import "../contracts/FactoryNFTLendPropy.sol";
+import "../src/NFTLendPropy.sol";
+import "../src/FactoryNFTLendPropy.sol";
+import "../src/IERC20.sol";
+import "../src/IERC721.sol";
 
 contract NFTLendPropyTest is Test {
     FactoryNFTLendPropy factory;
     NFTLendPropy lendContract;
-    SampleERC20 erc20;
-    SampleERC721 erc721;
+    IERC20 erc20;
+    IERC721 erc721;
     address owner;
     address borrower;
     address lender;
@@ -25,12 +25,12 @@ contract NFTLendPropyTest is Test {
         vm.deal(borrower, 1 ether);
         vm.deal(lender, 1 ether);
 
-        erc20 = new SampleERC20(1_000_000 ether);
-        erc20.transfer(borrower, 1_000 ether);
-        erc20.transfer(lender, 1_000 ether);
+        // Initialize interfaces with the deployed contract addresses
+        erc20 = IERC20(vm.envAddress("ERC20_ADDRESS"));
+        erc721 = IERC721(vm.envAddress("ERC721_ADDRESS"));
 
-        erc721 = new SampleERC721();
-        borrowerTokenId = erc721.createCollectible();
+        // Assume borrower owns tokenId 1
+        borrowerTokenId = 1;
 
         factory = new FactoryNFTLendPropy();
         factory.createLendContract(address(erc20));
