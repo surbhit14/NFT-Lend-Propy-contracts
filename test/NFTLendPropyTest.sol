@@ -16,7 +16,7 @@ contract NFTLendPropyTest is Test {
     address lender;
     uint256 borrowerTokenId;
 
-        function setUp() public {
+    function setUp() public {
         owner = address(this);
         borrower = address(1);
         lender = address(2);
@@ -30,6 +30,8 @@ contract NFTLendPropyTest is Test {
 
         // Transfer ERC20 tokens to lender
         erc20.transfer(lender, 1000 ether);
+
+        erc20.transfer(borrower, 1000 ether);
         // Deploy the lending contract
         lendContract = new NFTLendPropy(address(erc20));
     }
@@ -66,7 +68,7 @@ contract NFTLendPropyTest is Test {
         erc20.approve(address(lendContract), amount);
         uint256 offerId = lendContract.createOffer(address(erc721), borrowerTokenId, 500, duration, amount);
 
-        emit log_named_uint("Borrower ERC20 Balance after creating offer", erc20.balanceOf(lender));
+        emit log_named_uint("Lender ERC20 Balance after creating offer", erc20.balanceOf(lender));
 
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
@@ -78,9 +80,8 @@ contract NFTLendPropyTest is Test {
         emit log_named_address("Offer Lender", offer.lender);
         emit log_named_uint("Offer Amount", offer.amount);
 
-        emit log_named_uint("Borrower ERC20 Balance", erc20.balanceOf(borrower));
-
-
+        emit log_named_uint("Lender ERC20 Balance", erc20.balanceOf(lender));
+        assertEq(erc20.balanceOf(lender), 1000 ether - amount);
         vm.stopPrank();
     }
 
@@ -103,46 +104,70 @@ contract NFTLendPropyTest is Test {
 
         NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
         assertEq(offer.borrower, borrower);
-        // assertEq(erc20.balanceOf(borrower), amount);
+        assertEq(erc20.balanceOf(borrower), 1000 ether + amount);
+        assertEq(erc20.balanceOf(lender), 1000 ether - amount);
 
         // Log for verification
         emit log_named_address("Offer Borrower", offer.borrower);
         emit log_named_uint("Borrower ERC20 Balance", erc20.balanceOf(borrower));
+        emit log_named_uint("Lender ERC20 Balance", erc20.balanceOf(lender));
 
         vm.stopPrank();
     }
 
-    function testRepayLend() public {
-        uint256 amount = 10 ether;
-        uint256 duration = 100 days;
+ function testRepayLend() public {
+    uint256 amount = 1 ether;
+    uint256 duration = 1;
 
-        vm.startPrank(borrower);
-        erc721.approve(address(lendContract), borrowerTokenId);
-        lendContract.listNft(address(erc721), borrowerTokenId);
-        vm.stopPrank();
+    // Step 1: Borrower lists the NFT
+    vm.startPrank(borrower);
+    erc721.approve(address(lendContract), borrowerTokenId);
+    lendContract.listNft(address(erc721), borrowerTokenId);
+    console.log("Borrower ERC20 Balance after listing NFT: ", erc20.balanceOf(borrower));
+    vm.stopPrank();
 
-        vm.startPrank(lender);
-        erc20.approve(address(lendContract), amount);
-        uint256 offerId = lendContract.createOffer(address(erc721), borrowerTokenId, 500, duration, amount);
-        vm.stopPrank();
+    // Step 2: Lender creates an offer
+    vm.startPrank(lender);
+    erc20.approve(address(lendContract), amount);
+    uint256 offerId = lendContract.createOffer(address(erc721), borrowerTokenId, 500, duration, amount);
+    console.log("Lender ERC20 Balance after creating offer: ", erc20.balanceOf(lender));
+    vm.stopPrank();
 
-        vm.startPrank(borrower);
-        lendContract.acceptOffer(offerId);
+    // Step 3: Borrower accepts the offer
+    vm.startPrank(borrower);
+    lendContract.acceptOffer(offerId);
+    console.log("Borrower ERC20 Balance after accepting offer: ", erc20.balanceOf(borrower));
+    console.log("Lender ERC20 Balance after borrower accepts offer: ", erc20.balanceOf(lender));
+    vm.stopPrank();
 
-        uint256 interest = lendContract.getInterest(offerId, block.timestamp, block.timestamp + duration);
-        erc20.approve(address(lendContract), amount + interest);
-        lendContract.repayLend(offerId);
+    // Step 4: Borrower repays the loan
+    vm.startPrank(borrower);
+    uint256 interest = lendContract.getInterest(offerId, block.timestamp, block.timestamp + duration);
 
-        NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
-        assertEq(offer.active, false);
-        assertEq(erc721.ownerOf(borrowerTokenId), borrower);
+    console.log("Calculated Interest: ", interest);
+    console.log("Calculated Interest with Amount: ", amount + interest);
+    
+    erc20.approve(address(lendContract), amount + interest);
+    lendContract.repayLend(offerId);
+    console.log("Borrower ERC20 Balance after repayment: ", erc20.balanceOf(borrower));
+    console.log("Lender ERC20 Balance after repayment: ", erc20.balanceOf(lender));
 
-        // Log for verification
-        emit log_named_uint("Offer Active", offer.active ? 1 : 0);
-        emit log_named_address("NFT Owner after Repayment", erc721.ownerOf(borrowerTokenId));
+    NFTLendPropy.Offer memory offer = lendContract.getOffer(offerId);
 
-        vm.stopPrank();
-    }
+    // Log for verification
+    emit log_named_uint("Offer Active", offer.active ? 1 : 0);
+    emit log_named_address("NFT Owner after Repayment", erc721.ownerOf(borrowerTokenId));
+    emit log_named_uint("Borrower ERC20 Balance after Repayment", erc20.balanceOf(borrower));
+    emit log_named_uint("Lender ERC20 Balance after Repayment", erc20.balanceOf(lender));
+
+    assertEq(offer.active, false);
+    assertEq(erc721.ownerOf(borrowerTokenId), borrower);
+    assertEq(erc20.balanceOf(borrower), 1000 ether - interest);
+    assertEq(erc20.balanceOf(lender), 1000 ether + interest);
+
+    vm.stopPrank();
+}
+
 
     function testClaimCollateral() public {
         uint256 amount = 10 ether;
@@ -174,6 +199,7 @@ contract NFTLendPropyTest is Test {
         // Log for verification
         emit log_named_uint("Offer Active", offer.active ? 1 : 0);
         emit log_named_address("NFT Owner after Collateral Redemption", erc721.ownerOf(borrowerTokenId));
+        emit log_named_uint("Lender ERC20 Balance after Collateral Redemption", erc20.balanceOf(lender));
 
         vm.stopPrank();
     }

@@ -126,12 +126,14 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         require(offer.borrower == msg.sender, "You did not accept this offer");
         require(block.timestamp <= offer.endTime, "Loan has expired");
 
-        uint256 plannedDuration = offer.duration;
-        uint256 principal = offer.amount;
-        uint256 interestRate = offer.interestRate;
-        uint256 interestPerSecond = (principal * interestRate) / plannedDuration;
-        uint256 actualDuration = block.timestamp - offer.startTime;
-        uint256 interest = (actualDuration * interestPerSecond) / uint256(10000);
+        // uint256 plannedDuration = offer.duration;
+        // uint256 principal = offer.amount;
+        // uint256 interestRate = offer.interestRate;
+        // uint256 interestPerSecond = (principal * interestRate) / plannedDuration;
+        // uint256 actualDuration = block.timestamp - offer.startTime;
+        // uint256 interest = (actualDuration * interestPerSecond) / uint256(10000);
+
+        uint256 interest = getInterest(_offerId, block.timestamp, block.timestamp + offer.duration);
 
         require(token.balanceOf(msg.sender) >= offer.amount + interest, "Insufficient balance");
         token.transferFrom(msg.sender, offer.lender, offer.amount + interest);
@@ -180,7 +182,7 @@ contract NFTLendPropy is ReentrancyGuard, INFTLendPropy {
         return offersByNft[_nftContract][_tokenId];
     }
 
-    function getInterest(uint256 _offerId, uint256 startTime, uint256 endTime) external view override returns (uint256) {
+    function getInterest(uint256 _offerId, uint256 startTime, uint256 endTime) public view override returns (uint256) {
         uint256 plannedDuration = offers[_offerId].duration;
         uint256 principal = offers[_offerId].amount;
         uint256 interestRate = offers[_offerId].interestRate;
