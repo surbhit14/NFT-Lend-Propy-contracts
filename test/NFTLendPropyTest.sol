@@ -4,14 +4,14 @@ pragma solidity 0.8.25;
 import "forge-std/Test.sol";
 import "../src/NFTLendPropy.sol";
 import "../src/FactoryNFTLendPropy.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "../src/SampleERC20.sol";
+import "../src/SampleERC721.sol";
 
 contract NFTLendPropyTest is Test {
     FactoryNFTLendPropy factory;
     NFTLendPropy lendContract;
-    IERC20 erc20;
-    IERC721 erc721;
+    SampleERC20 erc20;
+    SampleERC721 erc721;
     address owner;
     address borrower;
     address lender;
@@ -25,17 +25,23 @@ contract NFTLendPropyTest is Test {
         vm.deal(borrower, 1 ether);
         vm.deal(lender, 1 ether);
 
-        // Initialize interfaces with the deployed contract addresses
-        erc20 = IERC20(vm.envAddress("ERC20_ADDRESS"));
-        erc721 = IERC721(vm.envAddress("ERC721_ADDRESS"));
+        // Deploy Sample ERC20 and ERC721 tokens
+        erc20 = new SampleERC20("SampleToken", "STK", 1_000_000 * 10 ** 18);
+        erc721 = new SampleERC721("SampleNFT", "SNFT");
 
-        // Assume borrower owns tokenId 1
-        borrowerTokenId = 1;
+        // Mint ERC20 tokens to borrower and lender
+        erc20.mint(borrower, 1_000 * 10 ** 18);
+        erc20.mint(lender, 1_000 * 10 ** 18);
 
+        // Mint an ERC721 token to the borrower
+        borrowerTokenId = erc721.mint(borrower);
+
+        // Deploy the factory and create a lend contract
         factory = new FactoryNFTLendPropy();
         factory.createLendContract(address(erc20));
         lendContract = NFTLendPropy(factory.getLendContract(0));
 
+        // Approve and list the NFT
         vm.startPrank(borrower);
         erc721.approve(address(lendContract), borrowerTokenId);
         lendContract.listNft(address(erc721), borrowerTokenId);
@@ -134,5 +140,4 @@ contract NFTLendPropyTest is Test {
         assertEq(erc721.ownerOf(borrowerTokenId), lender);
         vm.stopPrank();
     }
-
 }
