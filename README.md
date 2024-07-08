@@ -2,7 +2,8 @@
 
 This project consists of a set of smart contracts that facilitate the lending and borrowing of funds using NFTs (Non-Fungible Tokens) as collateral. The primary objective is to create a secure and efficient mechanism for users to leverage their NFT assets to obtain liquidity without having to sell their valuable collectibles. The platform allows borrowers to lock up their NFTs in exchange for a loan of a specified amount of USDC (or other ERC20 tokens), with clearly defined interest rates and loan terms. This approach provides both borrowers and lenders with a transparent and decentralized way to engage in NFT-backed lending.
 
-![image](https://github.com/surbhit14/NFT-Lend-Propy-contracts/assets/82264758/1d1e7b45-335f-40ea-bd21-4d3331d452eb)
+![image](https://github.com/surbhit14/NFT-Lend-Propy-contracts/assets/82264758/ff981524-07a6-4b4f-946b-b7f6e8dab9c0)
+
 
 ## Project Overview
 In the rapidly growing world of digital assets, NFTs have emerged as a significant asset class, representing ownership of unique items such as digital art, collectibles, and virtual real estate. However, the liquidity of NFTs remains a challenge as they are typically illiquid assets, meaning it can be difficult to quickly convert them into cash without selling them. This project addresses this issue by enabling NFT owners to borrow against their NFTs, unlocking liquidity while still retaining ownership of their assets.
