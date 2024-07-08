@@ -4,7 +4,6 @@ This project consists of a set of smart contracts that facilitate the lending an
 
 ![image](https://github.com/surbhit14/NFT-Lend-Propy-contracts/assets/82264758/ff981524-07a6-4b4f-946b-b7f6e8dab9c0)
 
-
 ## Project Overview
 In the rapidly growing world of digital assets, NFTs have emerged as a significant asset class, representing ownership of unique items such as digital art, collectibles, and virtual real estate. However, the liquidity of NFTs remains a challenge as they are typically illiquid assets, meaning it can be difficult to quickly convert them into cash without selling them. This project addresses this issue by enabling NFT owners to borrow against their NFTs, unlocking liquidity while still retaining ownership of their assets.
 
@@ -47,15 +46,12 @@ In the rapidly growing world of digital assets, NFTs have emerged as a significa
 
 6. **Automated Loan Repayment and Collateral Release**: Upon repayment of the loan and interest, the collateralized NFT is automatically returned to the borrower. If the borrower defaults, the collateral is transferred to the lender.
 
-### Security and Efficiency
+## Current Contract Deployments on Base Sepolia
+### FactoryNFTLendPropy 
+0xAE64136B8488675362dDc03203F7567E865f23F8
 
-The smart contracts are designed with security and efficiency in mind:
-
-- **Reentrancy Guard**: The contracts utilize the `ReentrancyGuard` from OpenZeppelin to prevent reentrancy attacks.
-- **Data Validation**: Various checks are implemented to validate data inputs, ensuring the correctness and integrity of operations.
-- **Transparent Transactions**: All transactions and state changes are recorded on the blockchain, providing a transparent and immutable record of all activities.
-
-This project aims to provide a robust and reliable platform for NFT-backed lending, offering users a new way to unlock liquidity from their NFT assets while maintaining ownership and control.
+### NFTLendPropy (for USDC )
+0xbF078CF86E8377853c189c41bc0f52b7E9e71366
 
 ## Usage
 
@@ -70,4 +66,17 @@ $ forge build
 ```shell
 $ forge test
 ```
+
+### Deploy 
+
+```shell
+$ forge script script/DeployContract.s.sol --broadcast --rpc-url <RPC_URL>
+```
+
+### Deploy on Base Sepolia 
+```shell
+$ forge script script/DeployContract.s.sol --broadcast --rpc-url https://sepolia.base.org
+```
+
+
 
